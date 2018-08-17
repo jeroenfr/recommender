@@ -1,0 +1,31 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Reading in data: large data set of 17.3 million observations. UserID are users which gave a rating on a 10 point scale to other users (profileID).
+
+```{r}
+#df <- read.delim("data/libimseti/ratings.dat", sep = ",", header = F)
+colnames(df) <- c("userID", "profileID", "rating")
+head(df)
+```
+
+Now the data need to be converted to rating matrix. These files contain 17,359,346 anonymous ratings of 168,791 profiles
+made by 135,359 LibimSeTi users as dumped on April 4, 2006. Not all profiles gave ratings to others. Rating matrix is created with the 'Matrix' package.
+```{r}
+library(Matrix)
+library(dplyr)
+ratingMatrix <- sparseMatrix(i = df$userID,
+                         j = df$profileID,
+                         x = df$rating)
+
+table_rat <- table(as.vector(ratingMatrix@x))
+
+table <- rbind(table_rat, prop.table(table_rat))
+rownames(table) <- c("# Ratings", "% of Ratings")
+tab_df <- as.data.frame(table)
+bind_rows(round(tab_df[1,], 0), round(tab_df[2,], 2))
+
+```
+
