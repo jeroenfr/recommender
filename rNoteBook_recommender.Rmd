@@ -1,12 +1,16 @@
 ---
-title: "R Notebook"
-output: html_notebook
+title: "Recommender"
+output:
+  html_document:
+    df_print: paged
 ---
 
 Reading in data: large data set of 17.3 million observations. UserID are users which gave a rating on a 10 point scale to other users (profileID).
 
 ```{r}
 #df <- read.delim("data/libimseti/ratings.dat", sep = ",", header = F)
+#save(df, file = "data/ratMatrix.Rdata")
+load( file = "data/ratMatrix.Rdata")
 colnames(df) <- c("userID", "profileID", "rating")
 head(df)
 ```
@@ -18,7 +22,9 @@ library(Matrix)
 library(dplyr)
 ratingMatrix <- sparseMatrix(i = df$userID,
                          j = df$profileID,
-                         x = df$rating)
+                         x = df$rating,
+                         dimnames = list(paste("user", 1:max(df$userID), sep = ' '),
+                                         paste("profile", 1:max(df$profileID))))
 
 table_rat <- table(as.vector(ratingMatrix@x))
 
@@ -28,4 +34,25 @@ tab_df <- as.data.frame(table)
 bind_rows(round(tab_df[1,], 0), round(tab_df[2,], 2))
 
 ```
+```{r}
+library(recommenderlab)
+realRatMatrix <- as(ratingMatrix, "realRatingMatrix")
+# im <- image(sample(realRatMatrix), main = "Heatmap of first users and profiles")
+# im
+realRatMatrix
+image(realRatMatrix[1:100, 1:100]) #Very sparse matrix
+```
+The plot shows that it is a very sparse matrix. We will take a subset of more relevant users and profiles to make the demo. 
 
+```{r}
+min_n_profiles <- quantile(rowCounts(realRatMatrix), .99) #top users have rated 1051 profiles
+min_n_users <- quantile(colCounts(realRatMatrix), .99) #top profiles are rated by 1060 users
+topMat <- realRatMatrix[rowCounts(realRatMatrix) > min_n_profiles, colCounts(realRatMatrix) > min_n_users]
+image(topMat[1:30, 1:30], main = "Selection from top users and profiles")
+```
+
+```{r}
+hist(rowMeans(realRatMatrix), main = "Distribution of mean profile ratings")
+hist(rowMeans(topMat), main = "Distribution of mean profile ratings")
+```
+As can be seen on the histograms, there are less extreme observations among the top users. Including all users can lead to biased results. For that reason, we can train the model based on top users and profiles. This may result in lack of ratings for some users or profiles, so there we might give only generic top profiles instead of personal recommendations. 
