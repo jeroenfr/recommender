@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Demo koffieshop</title>
+  <style>
+    body { margin: 0; font-family: Georgia, serif; background: #faf7f2; color: #2b2118; }
+    header { background: #2b2118; color: #faf7f2; padding: 14px 16px; font-size: 1.2rem; }
+    main { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+    .product { display: grid; grid-template-columns: minmax(0, 220px) 1fr; gap: 24px; margin-bottom: 40px; }
+    .photo { aspect-ratio: 1; background: #e8dccd; border-radius: 12px; display: flex;
+             align-items: center; justify-content: center; font-size: 4rem; color: #8a5a3b; }
+    h1 { margin-top: 0; }
+    .price { font-size: 1.4rem; }
+    button { background: #8a5a3b; color: #fff; border: 0; padding: 10px 18px; border-radius: 8px; font-size: 1rem; }
+    .toolbar { font-family: system-ui, sans-serif; font-size: .9rem; background: #fff; border: 1px dashed #c9b8a4;
+               padding: 10px 12px; border-radius: 8px; margin-bottom: 24px; display: flex; gap: 12px;
+               flex-wrap: wrap; align-items: center; }
+    @media (max-width: 560px) { .product { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>&#9749; De Demo Koffiebar</header>
+  <main>
+    <div class="toolbar">
+      <label>Bekijk product: <select id="picker"></select></label>
+      <span id="stats"></span>
+    </div>
+
+    <section class="product">
+      <div class="photo" id="photo"></div>
+      <div>
+        <h1 id="name">Laden&hellip;</h1>
+        <p class="price" id="price"></p>
+        <button type="button">In winkelwagen</button>
+      </div>
+    </section>
+
+    <!-- This is all a shop owner has to add: -->
+    <div id="recs" data-recs-title="Klanten kochten ook"></div>
+    <script src="/widget.js" defer></script>
+  </main>
+
+  <script>
+    var current = new URLSearchParams(location.search).get("product") || "P01";
+    var recs = document.getElementById("recs");
+    recs.setAttribute("data-recs-product", current);
+
+    fetch("/api/products").then(function (r) { return r.json(); }).then(function (data) {
+      var picker = document.getElementById("picker");
+      data.products.forEach(function (p) {
+        var o = document.createElement("option");
+        o.value = p.product_id;
+        o.textContent = p.product_id + " - " + p.name;
+        if (p.product_id === current) {
+          o.selected = true;
+          document.getElementById("name").textContent = p.name;
+          document.getElementById("photo").textContent = p.name.charAt(0);
+          document.getElementById("price").textContent = "€ " + Number(p.price).toFixed(2).replace(".", ",");
+        }
+        picker.appendChild(o);
+      });
+      picker.addEventListener("change", function () { location.search = "?product=" + picker.value; });
+    });
+
+    function refreshStats() {
+      fetch("/api/stats").then(function (r) { return r.json(); }).then(function (s) {
+        document.getElementById("stats").textContent =
+          "Vertoningen: " + s.impressions + " · Kliks: " + s.clicks + " · CTR: " + (s.ctr * 100).toFixed(1) + "%";
+      });
+    }
+    refreshStats();
+    setInterval(refreshStats, 3000);
+  </script>
+</body>
+</html>
